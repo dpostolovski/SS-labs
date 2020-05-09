@@ -6,10 +6,11 @@ from matplotlib import pyplot
 from scipy.optimize import fmin_powell, least_squares
 
 class Node():
-    def __init__(self, true_position, calculated_position, level=None):
+    def __init__(self, true_position, calculated_position, level=None, heuristic =None):
         self.level = level
         self.calculated_position = calculated_position
         self.true_position = true_position
+        self.heuristic = heuristic
 
 class Simulator():
     def __init__(self,nodes, anchor_nodes, length, radio_range, noise ):
@@ -40,19 +41,22 @@ class Simulator():
         y = random.uniform(start,end)
         return x, y
 
-    def run(self, level=0):
-        anchors = [item for item in sim.nodes if item.level is not None and item.level <= level]
-        for node in self.nodes:
-            if node.level is None:
+    def run(self, iteration=0):
+        for level in range(iteration):
+            anchors = [item for item in sim.nodes if item.level is not None and item.level <= level]
+            for node in self.nodes:
+                if node.level is None:
+                    anchors_for_node = self.find_anchors_of(node, anchors)
+                    if anchors_for_node.__len__() < 3:
+                        continue
 
-                anchors_for_node = self.find_anchors_of(node, anchors)
-                if anchors_for_node.__len__() < 3:
-                    continue
+                    position = self._localize_node(node, anchors_for_node)
+                    node.calculated_position = position[0], position[1]
+                    node.level = level+1
+                    node.heuristic = self.heuristic(node, anchors_for_node)
 
-                position = self._localize_node(node, anchors_for_node)
-                node.calculated_position = position[0], position[1]
-                node.level = level+1
-
+    def heuristic(self, node, anchors_for_node):
+        raise NotImplemented
 
     def find_anchors_of(self, node, anchors):
         raise NotImplemented
@@ -75,7 +79,7 @@ class Simulator():
         points  = list()
         for anchor in anchors:
             x, y = anchor.true_position
-            distance = Simulator.calculate_distance(node.true_position, anchor.true_position)
+            distance = Simulator.calculate_distance(node.true_position, anchor.calculated_position)
             distance = distance + random.uniform(-distance*self.noise, distance*self.noise )
             points.append([x, y, distance])
 
@@ -108,11 +112,36 @@ class ClosestAnchorsSimulator(Simulator):
         anchors = [ distance[1] for distance in distances ]
         return anchors
 
+    def heuristic(self, node, anchors_for_node):
+        return node.level
+
+class MostRelevantAnchorsSimulator(Simulator):
+    def initialize_nodes(self, n, anchor_nodes, length):
+        super().initialize_nodes(n, anchor_nodes, length)
+        for node in self.nodes:
+            if node.level==0:
+                node.heuristic=0
+
+    def heuristic(self, node, anchors_for_node):
+        return sum( [ anchors.heuristic for anchors in anchors_for_node] ) + 1
+
+    def find_anchors_of(self, node, anchors):
+        distances = list()
+        for anchor in anchors:
+            distance = self.calculate_distance(node.true_position, anchor.true_position)
+            if distance > self.radio_range:
+                continue
+            distances.append((anchor.heuristic, anchor))
+        distances = sorted(distances, key=lambda item: item[0])
+        distances = distances[0:3]
+        anchors = [ distance[1] for distance in distances ]
+        return anchors
+
 if __name__ == '__main__':
     errors = list()
-    N = 10
-    n_anchors = 4
-    L = 20
+    N = 20
+    n_anchors = 5
+    L = 50
     noise_ratio = 0.3
 
     non_anchor_nodes= N - n_anchors
@@ -120,13 +149,13 @@ if __name__ == '__main__':
     x = list()
     y = list()
     z = list()
-    for R in range(3, 15, 1):
+    for R in range(8, 25, 2):
         x.append(R)
         localization_ratio = list()
         ale_list = list()
         for i in range(15):
-            sim = ClosestAnchorsSimulator(N, n_anchors, L, R, noise_ratio)
-            sim.run(0)
+            sim = MostRelevantAnchorsSimulator(N, n_anchors, L, R, noise_ratio)
+            sim.run(4)
             loc_ratio, ale = sim.metrics()
             localization_ratio.append(loc_ratio)
             ale_list.append(ale)
