@@ -3,3 +3,5 @@ tables
 statsmodels
 sklearn
 matplotlib
+localization
+shapely
