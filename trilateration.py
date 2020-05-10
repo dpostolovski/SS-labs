@@ -43,7 +43,7 @@ class Simulator():
 
     def run(self, iteration=0):
         for level in range(iteration):
-            anchors = [item for item in sim.nodes if item.level is not None and item.level <= level]
+            anchors = [item for item in self.nodes if item.level is not None and item.level <= level]
             for node in self.nodes:
                 if node.level is None:
                     anchors_for_node = self.find_anchors_of(node, anchors)
@@ -137,32 +137,73 @@ class MostRelevantAnchorsSimulator(Simulator):
         anchors = [ distance[1] for distance in distances ]
         return anchors
 
+
+def metrics_extract(simulator_class, init_params, runparams):
+    localization_ratio = list()
+    ale_list = list()
+    for i in range(15):
+        simulator_object = simulator_class(*init_params)
+        simulator_object.run(runparams)
+        loc_ratio, ale = simulator_object.metrics()
+        localization_ratio.append(loc_ratio)
+        ale_list.append(ale)
+
+    return numpy.mean(localization_ratio), numpy.mean(ale_list)
+
+def non_iterative_by_R(N, n_anchors, L, noise_ratio):
+    x = list()
+    y = list()
+    z = list()
+    for R in range(8, 25, 2):
+        x.append(R)
+        loc_ratio, ale = metrics_extract(MostRelevantAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
+                                         runparams=4)
+        y.append(loc_ratio)
+        z.append(ale)
+
+    pyplot.plot(x, y)
+    pyplot.plot(x, z)
+    pyplot.show()
+
+def non_iterative_by_f(N, L, noise_ratio, R):
+    x = list()
+    y = list()
+    z = list()
+    for n_anchors in range(1, N-1, 1):
+        x.append(n_anchors)
+        loc_ratio, ale = metrics_extract(MostRelevantAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
+                                         runparams=4)
+        y.append(loc_ratio)
+        z.append(ale)
+
+    pyplot.plot(x, y)
+    pyplot.plot(x, z)
+    pyplot.show()
+
+def non_iterative_by_noise(N, n_anchors, L, R):
+    x = list()
+    y = list()
+    z = list()
+    for noise_ratio in range(1, 10, 1):
+        x.append(noise_ratio/10.0)
+        loc_ratio, ale = metrics_extract(MostRelevantAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio/10.0),
+                                         runparams=4)
+        y.append(loc_ratio)
+        z.append(ale)
+
+    pyplot.plot(x, y)
+    pyplot.plot(x, z)
+    pyplot.show()
+
 if __name__ == '__main__':
     errors = list()
     N = 20
     n_anchors = 5
     L = 50
     noise_ratio = 0.3
+    R = 15
 
-    non_anchor_nodes= N - n_anchors
+    non_iterative_by_R(N, n_anchors, L, noise_ratio)
+    non_iterative_by_f(N, L, noise_ratio, R)
+    non_iterative_by_noise(N, n_anchors, L, R)
 
-    x = list()
-    y = list()
-    z = list()
-    for R in range(8, 25, 2):
-        x.append(R)
-        localization_ratio = list()
-        ale_list = list()
-        for i in range(15):
-            sim = MostRelevantAnchorsSimulator(N, n_anchors, L, R, noise_ratio)
-            sim.run(4)
-            loc_ratio, ale = sim.metrics()
-            localization_ratio.append(loc_ratio)
-            ale_list.append(ale)
-        y.append(numpy.mean(localization_ratio))
-        z.append(numpy.mean(ale_list))
-
-
-    pyplot.plot(x, y)
-    pyplot.plot(x, z)
-    pyplot.show()
