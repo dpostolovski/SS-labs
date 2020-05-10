@@ -138,10 +138,10 @@ class MostRelevantAnchorsSimulator(Simulator):
         return anchors
 
 
-def metrics_extract(simulator_class, init_params, runparams):
+def metrics_extract(simulator_class, init_params, runparams, iterrations=15):
     localization_ratio = list()
     ale_list = list()
-    for i in range(15):
+    for i in range(iterrations):
         simulator_object = simulator_class(*init_params)
         simulator_object.run(runparams)
         loc_ratio, ale = simulator_object.metrics()
@@ -171,6 +171,7 @@ def non_iterative_by_R(N, n_anchors, L, noise_ratio):
     pyplot.xlabel(RADIO_RANGE_LABEL)
     pyplot.title('Non-iterative, L:{length}, nodes:{nodes}, anchors:{anchors}, noise:{noise}'.format(length=L, nodes=N, anchors=n_anchors, noise=noise_ratio))
     pyplot.legend()
+    pyplot.savefig('non_iterative_by_R.png')
     pyplot.show()
 
 def non_iterative_by_f(N, L, noise_ratio, R):
@@ -190,6 +191,7 @@ def non_iterative_by_f(N, L, noise_ratio, R):
     pyplot.title('Non-iterative, L:{length}, nodes:{nodes}, radio range:{range}, noise:{noise}'.format(length=L, nodes=N, range=R,
                                                                                          noise=noise_ratio))
     pyplot.legend()
+    pyplot.savefig('non_iterative_by_f.png')
     pyplot.show()
 
 def non_iterative_by_noise(N, n_anchors, L, R):
@@ -199,7 +201,7 @@ def non_iterative_by_noise(N, n_anchors, L, R):
     for noise_ratio in range(1, 10, 1):
         x.append(noise_ratio/10.0)
         loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio/10.0),
-                                         runparams=1)
+                                         runparams=1, iterrations=40)
         y.append(loc_ratio)
         z.append(ale)
 
@@ -208,6 +210,7 @@ def non_iterative_by_noise(N, n_anchors, L, R):
     pyplot.title('Non-iterative,L:{length}, nodes:{nodes}, radio range:{range}, anchors:{anchors}'.format(length=L,nodes=N, range=R,
                                                                                            anchors=n_anchors))
     pyplot.legend()
+    pyplot.savefig('non_iterative_by_noise.png')
     pyplot.show()
 
 
@@ -226,6 +229,7 @@ def iterative_by_R(N, n_anchors, L, noise_ratio, maxiterations):
     pyplot.xlabel(RADIO_RANGE_LABEL)
     pyplot.title('Iterative, max iter.:{maxiterations}, L:{length}, nodes:{nodes}, anchors:{anchors}, noise:{noise}'.format(maxiterations=maxiterations,length=L, nodes=N, anchors=n_anchors, noise=noise_ratio))
     pyplot.legend()
+    pyplot.savefig('iterative_by_R.png')
     pyplot.show()
 
 def iterative_by_f(N, L, noise_ratio, R,maxiterations):
@@ -244,6 +248,7 @@ def iterative_by_f(N, L, noise_ratio, R,maxiterations):
     pyplot.title('Iterative, max iter.:{maxiterations}, L:{length}, nodes:{nodes}, radio range:{range}, noise:{noise}'.format(maxiterations=maxiterations,length=L, nodes=N, range=R,
                                                                                          noise=noise_ratio))
     pyplot.legend()
+    pyplot.savefig('iterative_by_f.png')
     pyplot.show()
 
 def iterative_by_noise(N, n_anchors, L, R,maxiterations):
@@ -253,7 +258,7 @@ def iterative_by_noise(N, n_anchors, L, R,maxiterations):
     for noise_ratio in range(1, 10, 1):
         x.append(noise_ratio/10.0)
         loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio/10.0),
-                                         runparams=maxiterations)
+                                         runparams=maxiterations, iterrations=40)
         y.append(loc_ratio)
         z.append(ale)
 
@@ -262,6 +267,7 @@ def iterative_by_noise(N, n_anchors, L, R,maxiterations):
     pyplot.title('Iterative, max iter.:{maxiterations}, nodes:{nodes}, radio range:{range}, anchors:{anchors}'.format(maxiterations=maxiterations,length=L,nodes=N, range=R,
                                                                                            anchors=n_anchors))
     pyplot.legend()
+    pyplot.savefig('iterative_by_noise.png')
     pyplot.show()
 if __name__ == '__main__':
     N = 20
