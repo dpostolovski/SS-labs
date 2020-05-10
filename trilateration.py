@@ -97,7 +97,7 @@ class Simulator():
                    for node in self.nodes if node.level is not None and node.level !=0 ]
 
         ale = sum(errors) / ((self.n - self.anchor_nodes) * self.radio_range )
-        return localized_ratio, ale
+        return localized_ratio * 100, ale * 100
 
 class ClosestAnchorsSimulator(Simulator):
     def find_anchors_of(self, node, anchors):
@@ -150,19 +150,27 @@ def metrics_extract(simulator_class, init_params, runparams):
 
     return numpy.mean(localization_ratio), numpy.mean(ale_list)
 
+LOCALIZED_LABEL = 'Localized %'
+ALE_LABEL = 'ALE %'
+NOISE_RATIO_LABEL = 'Localization noise'
+ANCHOR_NODES = 'Anchor nodes'
+RADIO_RANGE_LABEL = 'Radio range'
 def non_iterative_by_R(N, n_anchors, L, noise_ratio):
     x = list()
     y = list()
     z = list()
-    for R in range(8, 25, 2):
+    for R in range(5, 25, 2):
         x.append(R)
-        loc_ratio, ale = metrics_extract(MostRelevantAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
-                                         runparams=4)
+        loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
+                                         runparams=1)
         y.append(loc_ratio)
         z.append(ale)
 
-    pyplot.plot(x, y)
-    pyplot.plot(x, z)
+    pyplot.plot(x, y,  label=LOCALIZED_LABEL)
+    pyplot.plot(x, z, label=ALE_LABEL)
+    pyplot.xlabel(RADIO_RANGE_LABEL)
+    pyplot.title('Non-iterative, L:{length}, nodes:{nodes}, anchors:{anchors}, noise:{noise}'.format(length=L, nodes=N, anchors=n_anchors, noise=noise_ratio))
+    pyplot.legend()
     pyplot.show()
 
 def non_iterative_by_f(N, L, noise_ratio, R):
@@ -171,13 +179,17 @@ def non_iterative_by_f(N, L, noise_ratio, R):
     z = list()
     for n_anchors in range(1, N-1, 1):
         x.append(n_anchors)
-        loc_ratio, ale = metrics_extract(MostRelevantAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
-                                         runparams=4)
+        loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
+                                         runparams=1)
         y.append(loc_ratio)
         z.append(ale)
 
-    pyplot.plot(x, y)
-    pyplot.plot(x, z)
+    pyplot.plot(x, y, label=LOCALIZED_LABEL)
+    pyplot.plot(x, z, label=ALE_LABEL)
+    pyplot.xlabel(ANCHOR_NODES)
+    pyplot.title('Non-iterative, L:{length}, nodes:{nodes}, radio range:{range}, noise:{noise}'.format(length=L, nodes=N, range=R,
+                                                                                         noise=noise_ratio))
+    pyplot.legend()
     pyplot.show()
 
 def non_iterative_by_noise(N, n_anchors, L, R):
@@ -186,24 +198,84 @@ def non_iterative_by_noise(N, n_anchors, L, R):
     z = list()
     for noise_ratio in range(1, 10, 1):
         x.append(noise_ratio/10.0)
-        loc_ratio, ale = metrics_extract(MostRelevantAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio/10.0),
-                                         runparams=4)
+        loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio/10.0),
+                                         runparams=1)
         y.append(loc_ratio)
         z.append(ale)
 
-    pyplot.plot(x, y)
-    pyplot.plot(x, z)
+    pyplot.plot(x, z, label=ALE_LABEL)
+    pyplot.xlabel(NOISE_RATIO_LABEL)
+    pyplot.title('Non-iterative,L:{length}, nodes:{nodes}, radio range:{range}, anchors:{anchors}'.format(length=L,nodes=N, range=R,
+                                                                                           anchors=n_anchors))
+    pyplot.legend()
     pyplot.show()
 
+
+def iterative_by_R(N, n_anchors, L, noise_ratio, maxiterations):
+    x = list()
+    y = list()
+    z = list()
+    for R in range(5, 25, 2):
+        x.append(R)
+        loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
+                                         runparams=maxiterations)
+        y.append(loc_ratio)
+        z.append(ale)
+
+    pyplot.plot(x, z, label=ALE_LABEL)
+    pyplot.xlabel(RADIO_RANGE_LABEL)
+    pyplot.title('Iterative, max iter.:{maxiterations}, L:{length}, nodes:{nodes}, anchors:{anchors}, noise:{noise}'.format(maxiterations=maxiterations,length=L, nodes=N, anchors=n_anchors, noise=noise_ratio))
+    pyplot.legend()
+    pyplot.show()
+
+def iterative_by_f(N, L, noise_ratio, R,maxiterations):
+    x = list()
+    y = list()
+    z = list()
+    for n_anchors in range(1, N-1, 1):
+        x.append(n_anchors)
+        loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio),
+                                         runparams=maxiterations)
+        y.append(loc_ratio)
+        z.append(ale)
+
+    pyplot.plot(x, z, label=ALE_LABEL)
+    pyplot.xlabel(ANCHOR_NODES)
+    pyplot.title('Iterative, max iter.:{maxiterations}, L:{length}, nodes:{nodes}, radio range:{range}, noise:{noise}'.format(maxiterations=maxiterations,length=L, nodes=N, range=R,
+                                                                                         noise=noise_ratio))
+    pyplot.legend()
+    pyplot.show()
+
+def iterative_by_noise(N, n_anchors, L, R,maxiterations):
+    x = list()
+    y = list()
+    z = list()
+    for noise_ratio in range(1, 10, 1):
+        x.append(noise_ratio/10.0)
+        loc_ratio, ale = metrics_extract(ClosestAnchorsSimulator, init_params=(N, n_anchors, L, R, noise_ratio/10.0),
+                                         runparams=maxiterations)
+        y.append(loc_ratio)
+        z.append(ale)
+
+    pyplot.plot(x, z, label=ALE_LABEL)
+    pyplot.xlabel(NOISE_RATIO_LABEL)
+    pyplot.title('Iterative, max iter.:{maxiterations}, nodes:{nodes}, radio range:{range}, anchors:{anchors}'.format(maxiterations=maxiterations,length=L,nodes=N, range=R,
+                                                                                           anchors=n_anchors))
+    pyplot.legend()
+    pyplot.show()
 if __name__ == '__main__':
-    errors = list()
     N = 20
     n_anchors = 5
     L = 50
     noise_ratio = 0.3
     R = 15
+    maxiterations=10
 
     non_iterative_by_R(N, n_anchors, L, noise_ratio)
     non_iterative_by_f(N, L, noise_ratio, R)
-    non_iterative_by_noise(N, n_anchors, L, R)
+    non_iterative_by_noise(N, n_anchors, L, R+10)
 
+
+    iterative_by_R(N, n_anchors, L, noise_ratio,maxiterations)
+    iterative_by_f(N, L, noise_ratio, R,maxiterations)
+    iterative_by_noise(N, n_anchors, L, R+10,maxiterations)
